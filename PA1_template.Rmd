@@ -1,25 +1,158 @@
----
-title: "Reproducible Research: Peer Assessment 1"
-output: 
-  html_document:
-    keep_md: true
----
+# Reproducible Research: Peer Assessment 1
+##########################################
 
-
-## Loading and preprocessing the data
-
-
+## Loading and preprocessing the data 
+#######################################
+*1. Load the data*
+```{r}
+acti_data <- read.csv("activity.csv")
+summary(acti_data)
+head(acti_data)
+```
+#######################################################################################
 
 ## What is mean total number of steps taken per day?
 
+*1.Calculate the total number of steps taken per day*
+```{r}
+steps <- aggregate(acti_data$steps, by = list(Date = acti_data$date), FUN = sum)
+library(ggplot2)
+names(steps)[names(steps) == "x"] <- "Total"
+temp <- as.Date(steps$Date, "%Y-%m-%d")
+steps$Date <- format(temp, format = "%m-%d")
+head(steps)
+```
 
+*2. Make a histogram of the total number of steps taken each day*
+```{r}
+hist1 <- ggplot(data = na.omit(steps), aes(Total)) + 
+    geom_histogram(binwidth = 1500, colour = "white") +
+    xlab("Total Number of Steps Taken Each Day") +
+    ylab("Count") +
+    ggtitle("Histogram of the Total Number of Steps Taken Each Day")
+print(hist1)
+```
+
+*3. Calculate and report the mean and median total number of steps taken per day*
+```{r}
+mean(na.omit(steps$Total))
+median(na.omit(steps$Total))
+```
+########################################################################################
 
 ## What is the average daily activity pattern?
 
+*1. Make a time series plot*
+```{r}
+five_min_steps <- aggregate(steps ~ interval, data = acti_data, FUN =mean)
+TimeSeries1 <- ggplot(data = five_min_steps, aes(x = interval, y = steps)) + 
+    geom_line() +
+    xlab("Time Intervals (5 Minutes is an unit)") + 
+    ylab("Total Number of Steps") +
+    ggtitle("Average Number of Steps Taken of the 5-Minute Interval")
+print(TimeSeries1) 
+```
 
+*2. Which 5-minute interval, on average across all the days in the dataset, contains the maximum number of steps?*
+```{r}
+head(five_min_steps)
+five_min_steps[which(five_min_steps$steps == max(five_min_steps$steps)),]
+```
+###########################################################################################
 
 ## Imputing missing values
 
+*1. Calculate and report the total number of missing values in the dataset*
+```{r}
+sapply(X = acti_data, FUN = function(x) sum(is.na(x)))
+```
 
+
+*2. Devise a strategy for filling in all of the missing values in the dataset.*
+```{r}
+library(dplyr)
+replace_with_mean <- function(num) replace(num, is.na(num), mean(num, na.rm = TRUE))
+meanday <- (acti_data %>% group_by(interval) %>% mutate(steps = replace_with_mean(steps)))
+head(meanday)
+sum(is.na(meanday))
+```
+
+*3. Create a new dataset that is equal to the original dataset but with the missing data filled in*
+```{r}
+new_dataset <- as.data.frame(meanday)
+head(new_dataset)
+summary(new_dataset)
+```
+
+*4. Make a histogram of the total number of steps taken each day and Calculate and report the mean and median total number of steps taken per day.*
+```{r}
+new_steps <- aggregate(new_dataset$steps, by = list(new_dataset$date), FUN = sum)
+names(new_steps)[names(new_steps) == "x"] <- "Total"
+names(new_steps)[names(new_steps) == "Group.1"] <- "Date"
+hist2 <- ggplot(data = new_steps, aes(Total)) + 
+    geom_histogram(binwidth = 1500, colour = "white") +
+    xlab("Total Number of Steps Taken Each Day") +
+    ylab("Count") +
+    ggtitle("Histogram of the Total Number of Steps Taken Each Day with New Version Dataset")
+print(hist2)
+```
+
+Now, we compare two plots.
+```{r}
+library(grid)
+library(gridExtra)
+grid.arrange(hist1, hist2, ncol = 2)
+```
+
+Compare the mean and median.
+```{r}
+mean(na.omit(steps$Total))
+median(na.omit(steps$Total))
+mean(new_steps$Total)
+median(new_steps$Total)
+```
+###########################################################################################
 
 ## Are there differences in activity patterns between weekdays and weekends?
+
+*1. Create a new factor variable in the dataset with two levels - "weekday" and "weekend" indicating whether a given date is a weekday or weekend day.*
+```{r}
+new_dataset$WeekendOrWeekday <- ifelse(weekdays(as.Date(new_dataset$date)) %in% c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday"), "Weekday", "Weekend")
+head(new_dataset)
+```
+
+*2. Make a panel plot containing a time series plot*
+```{r}
+new_dataset <- (new_dataset %>% group_by(interval, WeekendOrWeekday) %>% summarise(Mean = mean(steps)))
+ggplot(new_dataset, mapping = aes(x = interval, y = Mean)) + geom_line() +
+    facet_grid(WeekendOrWeekday ~.) + xlab("Interval") + ylab("Mean of Steps") +
+    ggtitle("Comparison of Average Number of Steps in Each Interval")
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
